@@ -1,0 +1,959 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ASCII-Labor – Text ↔ Codefolge ↔ Bits</title>
+  <style>
+    :root{
+      --bg1:#f6f7ff;
+      --bg2:#fff7fb;
+      --card:#ffffffcc;
+      --text:#1f2430;
+      --muted:#5b6578;
+      --accent:#7aa7ff;
+      --accent2:#7fe7c4;
+      --danger:#ff7b8a;
+      --border:#e5e8f2;
+      --shadow: 0 10px 28px rgba(31,36,48,.10);
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 700px at 15% 10%, rgba(122,167,255,.28), transparent 55%),
+        radial-gradient(900px 600px at 85% 15%, rgba(127,231,196,.28), transparent 55%),
+        radial-gradient(900px 700px at 45% 95%, rgba(255,123,138,.16), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+    header{
+      max-width:1200px;
+      margin:26px auto 10px;
+      padding:0 18px;
+      display:flex;
+      gap:14px;
+      align-items:flex-end;
+      justify-content:space-between;
+    }
+    header h1{ font-size: 20px; margin:0; letter-spacing:.2px; }
+    header p{ margin:6px 0 0; color: var(--muted); font-size: 13px; line-height:1.35; }
+
+    .wrap{
+      max-width:1200px;
+      margin: 0 auto 32px;
+      padding: 0 18px;
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap:16px;
+    }
+    @media (max-width: 980px){ .wrap{ grid-template-columns:1fr; } }
+
+    .card{
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      backdrop-filter: blur(8px);
+    }
+    .card .hd{
+      padding:14px 14px 10px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      background: linear-gradient(180deg, rgba(122,167,255,.10), rgba(127,231,196,.06));
+    }
+    .hd strong{ font-size: 13px; letter-spacing:.2px; }
+    .body{ padding: 14px; }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .badge.live{
+      border-color: rgba(122,167,255,.65);
+      background: linear-gradient(180deg, rgba(122,167,255,.18), rgba(122,167,255,.06));
+      color: #31406a;
+    }
+
+    label{ font-size: 12px; color: var(--muted); display:block; margin-bottom:6px; }
+    input, select, button, textarea{
+      width:100%;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 10px;
+      outline:none;
+    }
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(122,167,255,.85);
+      box-shadow: 0 0 0 3px rgba(122,167,255,.18);
+    }
+    textarea{
+      min-height: 130px;
+      resize: vertical;
+      line-height: 1.25;
+      font-family: var(--mono);
+      font-size: 12px;
+      background: #fbfcff;
+    }
+    textarea[readonly]{
+      background: #f6f7ff;
+      opacity: .95;
+    }
+
+    .row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .btns{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    button{ cursor:pointer; transition: transform .06s ease; }
+    button:active{ transform: translateY(1px); }
+    .primary{
+      border-color: rgba(122,167,255,.70);
+      background: linear-gradient(180deg, rgba(122,167,255,.30), rgba(122,167,255,.12));
+    }
+    .danger{
+      border-color: rgba(255,123,138,.70);
+      background: linear-gradient(180deg, rgba(255,123,138,.22), rgba(255,123,138,.10));
+    }
+    .ghost{ background: #fff; }
+    .hint{ color: var(--muted); font-size: 12px; line-height: 1.35; margin-top:10px; }
+    .sep{ height:12px; }
+
+    .flow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom: 10px;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background:#fff;
+      font-size: 12px;
+      color: var(--muted);
+      cursor:pointer;
+      user-select:none;
+    }
+    .chip.active{
+      border-color: rgba(122,167,255,.70);
+      background: rgba(122,167,255,.12);
+      color:#2d3c66;
+      font-weight: 700;
+    }
+    .arrow{
+      color: var(--muted);
+      font-size: 16px;
+      opacity: .7;
+    }
+
+    .panel{
+      border:1px solid var(--border);
+      border-radius: 16px;
+      background:#fbfcff;
+      padding:12px;
+    }
+
+    .tableWrap{
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius: 16px;
+      background:#fbfcff;
+    }
+    table{
+      border-collapse: collapse;
+      width:100%;
+      min-width: 680px;
+      font-size: 12px;
+    }
+    th, td{
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      vertical-align: top;
+    }
+    th{
+      position: sticky;
+      top: 0;
+      background:#fff;
+      z-index: 1;
+      color: var(--muted);
+      text-align:left;
+    }
+    td.mono{ font-family: var(--mono); }
+
+    .bigPreview{
+      padding: 12px;
+      border:1px solid var(--border);
+      border-radius: 16px;
+      background: #fbfcff;
+    }
+    .topLine{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .bigChar{
+      font-family: var(--mono);
+      font-size: 48px;
+      line-height: 1;
+      padding: 12px 16px;
+      border-radius: 18px;
+      background:#fff;
+      border:1px solid var(--border);
+      min-width: 120px;
+      text-align:center;
+    }
+    .pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background:#fff;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .bitBox{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+    .bit{
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      border:1px solid var(--border);
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: var(--mono);
+      font-weight: 900;
+      cursor:pointer;
+      user-select:none;
+    }
+    .bit.on{
+      background: rgba(122,167,255,.45);
+      border-color: rgba(122,167,255,.70);
+      box-shadow: 0 0 0 3px rgba(122,167,255,.15);
+    }
+    .weights{
+      display:flex; gap:6px; flex-wrap:wrap;
+      font-family: var(--mono);
+      color: var(--muted);
+      font-size: 11px;
+      margin-top:6px;
+    }
+    .weights span{ width:36px; text-align:center; opacity:.8; }
+
+    .navRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    /* Modal (ASCII Tabelle) */
+    .modalOverlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 18, 26, .42);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 999;
+    }
+    .modal{
+      width: min(980px, 100%);
+      max-height: min(80vh, 720px);
+      overflow:hidden;
+      border-radius: 18px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid var(--border);
+      box-shadow: 0 16px 48px rgba(0,0,0,.18);
+      backdrop-filter: blur(10px);
+    }
+    .modalHd{
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(122,167,255,.10), rgba(127,231,196,.06));
+    }
+    .modalHd strong{ font-size: 13px; letter-spacing:.2px; }
+    .modalBody{
+      padding: 12px 14px 14px;
+      overflow:auto;
+      max-height: calc(min(80vh, 720px) - 54px);
+    }
+    .modalTools{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items:end;
+    }
+    .miniNote{ font-size:12px; color: var(--muted); line-height:1.35; margin-top:8px; }
+    .closeBtn{ width:auto; padding: 8px 10px; }
+    .smallTbl{ min-width: 740px; }
+
+    .kbd{
+      font-family: var(--mono);
+      padding: 2px 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background:#fff;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    /* Clickable rows in ASCII table */
+    .clickRow{ cursor:pointer; }
+    .clickRow:hover{ background: rgba(122,167,255,.10); }
+  </style>
+</head>
+
+<body>
+<header>
+  <div>
+    <h1>ASCII-Labor – Arbeiten mit Zeichenfolgen</h1>
+  </div>
+  <div class="badge live" id="statusBadge">Modus: Text → Codes</div>
+</header>
+
+<div class="wrap">
+  <!-- Left -->
+  <section class="card">
+    <div class="hd">
+      <strong>Bedienung</strong>
+      <span class="badge" id="countBadge">0 Zeichen</span>
+    </div>
+    <div class="body">
+
+      <div class="flow">
+        <div class="chip active" id="chipT2C">Text → Codes</div>
+        <div class="arrow">↔</div>
+        <div class="chip" id="chipC2T">Codes → Text</div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Zahlenformat (Codefolge)</label>
+          <select id="codeBase">
+            <option value="dec" selected>Dezimal (z.B. 72 97 108)</option>
+            <option value="bin">Binär (z.B. 1001000 1100001 …)</option>
+          </select>
+        </div>
+        <div>
+          <label>Hilfe</label>
+          <button class="ghost" id="openAscii">ASCII-Tabelle öffnen</button>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- Neutraler Umwandeln-Block -->
+      <div class="panel">
+        <label>Umwandlung</label>
+        <div class="btns" style="margin-top:0">
+          <button class="primary" id="btnConvert">Umwandeln</button>
+          <button class="danger" id="btnClearAll">Eingabe leeren</button>
+        </div>
+        <div class="hint" id="convertHint">
+          Modus wählen → Umwandeln. „Eingabe leeren“ setzt alles zurück.
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="panel">
+        <label id="textLabel">Text (Eingabe)</label>
+        <textarea id="textBox" placeholder="Schreibe hier Text… z.B. Hallo!"></textarea>
+        <div class="hint" id="textHint">Text wird in eine Codefolge übersetzt (ASCII 0–127).</div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="panel">
+        <label id="codesLabel">Codefolge (Ausgabe)</label>
+        <textarea id="codesBox" placeholder="Hier steht die Codefolge…"></textarea>
+        <div class="hint" id="codesHint">Trennzeichen beim Eingeben: Leerzeichen, Komma oder Zeilenumbruch.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Right -->
+  <section class="card">
+    <div class="hd">
+      <strong>Biteditor:</strong>
+      <span class="badge" id="selBadge">Zeile: —</span>
+    </div>
+    <div class="body">
+
+      <div class="bigPreview">
+        <div class="topLine">
+          <div class="bigChar" id="bigChar">—</div>
+          <div class="pill" id="pillDec">Dec: —</div>
+          <div class="pill" id="pillBin">Bin: —</div>
+        </div>
+
+        <div class="sep"></div>
+        <label>Bits (7 Schalter) des aktuellen Zeichens</label>
+        <div class="bitBox" id="bitBox"></div>
+        <div class="weights" id="weights"></div>
+
+        <div class="navRow">
+          <button class="ghost" id="prevRow">◀ Vorheriges</button>
+          <button class="ghost" id="nextRow">Nächstes ▶</button>
+          <button class="danger" id="zeroBits">Alle Bits 0</button>
+        </div>
+
+        <div class="hint">
+          Stellenwerte: 64, 32, 16, 8, 4, 2, 1. Aus Bits wird eine Zahl und die Zahl wird als ASCII-Zeichen interpretiert.
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Zeichen</th>
+              <th>Code (Dec)</th>
+              <th>Code (Bin)</th>
+              <th>Hinweis</th>
+              <th>Aktion</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="6" class="muted">Noch keine Daten. Wandle links etwas um.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </section>
+</div>
+
+<!-- ASCII Modal -->
+<div class="modalOverlay" id="asciiOverlay" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="ASCII Tabelle">
+    <div class="modalHd">
+      <strong>ASCII-Tabelle (0–127)</strong>
+      <button class="ghost closeBtn" id="closeAscii">Schließen <span class="kbd">Esc</span></button>
+    </div>
+    <div class="modalBody">
+      <div class="modalTools">
+        <div>
+          <label>Suche (z.B. A, 65, space, LF)</label>
+          <input id="asciiSearch" placeholder="Tippe zum Filtern…" />
+          <div class="miniNote">
+            Klick auf eine Zeile: Wert wird in die Codefolge eingefügt (im aktuell gewählten Zahlenformat).
+          </div>
+        </div>
+      </div>
+
+      <div class="tableWrap">
+        <table class="smallTbl">
+          <thead>
+            <tr>
+              <th>Dec</th>
+              <th>Bin (7 Bit)</th>
+              <th>Zeichen</th>
+              <th>Name / Hinweis</th>
+            </tr>
+          </thead>
+          <tbody id="asciiTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const el = (id) => document.getElementById(id);
+
+  // --- Fixed didactic choice: classic ASCII 7-bit ---
+  const BIT_WIDTH = 7;
+  const MAX_VAL = (1 << BIT_WIDTH) - 1; // 127
+
+  const chipT2C = el("chipT2C");
+  const chipC2T = el("chipC2T");
+  const statusBadge = el("statusBadge");
+
+  const codeBaseSel = el("codeBase");
+
+  const btnConvert = el("btnConvert");
+  const btnClearAll = el("btnClearAll");
+
+  const textLabel = el("textLabel");
+  const codesLabel = el("codesLabel");
+  const textHint = el("textHint");
+  const convertHint = el("convertHint");
+
+  const textBox = el("textBox");
+  const codesBox = el("codesBox");
+
+  const tbody = el("tbody");
+  const countBadge = el("countBadge");
+  const selBadge = el("selBadge");
+
+  const bigChar = el("bigChar");
+  const pillDec = el("pillDec");
+  const pillBin = el("pillBin");
+  const bitBox = el("bitBox");
+  const weights = el("weights");
+
+  const prevRowBtn = el("prevRow");
+  const nextRowBtn = el("nextRow");
+  const zeroBitsBtn = el("zeroBits");
+
+  // ASCII modal
+  const openAsciiBtn = el("openAscii");
+  const asciiOverlay = el("asciiOverlay");
+  const closeAsciiBtn = el("closeAscii");
+  const asciiSearch = el("asciiSearch");
+  const asciiTbody = el("asciiTbody");
+
+  const clamp = (n,a,b) => Math.max(a, Math.min(b,n));
+
+  let state = {
+    mode: "T2C",     // "T2C" or "C2T"
+    base: "dec",
+    rows: [],        // {ch, code}
+    selected: -1,
+    bitValue: 0
+  };
+
+  function toBin7(v){
+    return (v & MAX_VAL).toString(2).padStart(BIT_WIDTH, "0");
+  }
+
+  function hintFor(code){
+    const map = {
+      0:"NUL", 7:"BEL", 8:"BS", 9:"TAB", 10:"LF", 13:"CR", 27:"ESC", 32:"SPACE", 127:"DEL"
+    };
+    if(map[code]) return map[code];
+    if(code < 32) return "Steuerzeichen";
+    return "";
+  }
+
+  function prettyChar(code){
+    if(code === 32) return "␠";
+    if(code === 9)  return "⇥";
+    if(code === 10) return "↵";
+    if(code < 32)   return "·";
+    if(code === 127) return "⌫";
+    return String.fromCharCode(code);
+  }
+
+  function codeToChar(code){
+    return String.fromCharCode(code & MAX_VAL);
+  }
+
+  function charToCode(ch){
+    return ch.charCodeAt(0) & MAX_VAL;
+  }
+
+  function setMode(m){
+    state.mode = m;
+    const t2c = (m === "T2C");
+
+    chipT2C.classList.toggle("active", t2c);
+    chipC2T.classList.toggle("active", !t2c);
+    statusBadge.textContent = t2c ? "Modus: Text → Codes" : "Modus: Codes → Text";
+
+    textLabel.textContent  = t2c ? "Text (Eingabe)" : "Text (Ausgabe)";
+    codesLabel.textContent = t2c ? "Codefolge (Ausgabe)" : "Codefolge (Eingabe)";
+
+    textHint.textContent = t2c
+      ? "Text wird in eine Codefolge übersetzt (ASCII 0–127)."
+      : "Text entsteht aus der Codefolge (ASCII 0–127).";
+
+    convertHint.textContent = t2c
+      ? "„Umwandeln“ erzeugt aus dem Text die Codefolge."
+      : "„Umwandeln“ erzeugt aus der Codefolge den Text.";
+
+    textBox.readOnly  = !t2c;
+    codesBox.readOnly = t2c;
+
+    btnConvert.textContent = t2c ? "Umwandeln: Text → Codefolge" : "Umwandeln: Codefolge → Text";
+
+    // Only work with matching side when switching:
+    if(t2c){
+      if((textBox.value || "").length){
+        doTextToCodes(false);
+      } else {
+        codesBox.value = "";
+        clearRows();
+      }
+    } else {
+      if((codesBox.value || "").trim().length){
+        doCodesToText(false);
+      } else {
+        textBox.value = "";
+        clearRows();
+      }
+    }
+  }
+
+  function updateCount(){
+    countBadge.textContent = `${state.rows.length} Zeichen`;
+  }
+
+  function clearRows(){
+    state.rows = [];
+    state.selected = -1;
+    state.bitValue = 0;
+    updateBigFromBits();
+    renderBits();
+    renderTable();
+  }
+
+  function renderTable(){
+    tbody.innerHTML = "";
+    if(state.rows.length === 0){
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 6;
+      td.className = "muted";
+      td.textContent = "Noch keine Daten. Wandle links etwas um.";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      selBadge.textContent = "Zeile: —";
+      updateCount();
+      return;
+    }
+
+    for(let i=0;i<state.rows.length;i++){
+      const r = state.rows[i];
+      const tr = document.createElement("tr");
+      tr.style.background = (i === state.selected) ? "rgba(122,167,255,.08)" : "";
+
+      const td0 = document.createElement("td"); td0.textContent = String(i+1);
+      const td1 = document.createElement("td"); td1.className = "mono"; td1.textContent = prettyChar(r.code);
+      const td2 = document.createElement("td"); td2.className = "mono"; td2.textContent = String(r.code);
+      const td3 = document.createElement("td"); td3.className = "mono"; td3.textContent = toBin7(r.code);
+      const td4 = document.createElement("td"); td4.className = "muted"; td4.textContent = hintFor(r.code);
+
+      const td5 = document.createElement("td");
+      const btn = document.createElement("button");
+      btn.className = "ghost";
+      btn.textContent = "Anzeigen";
+      btn.addEventListener("click", () => selectRow(i));
+      td5.appendChild(btn);
+
+      [td0,td1,td2,td3,td4,td5].forEach(td => tr.appendChild(td));
+      tbody.appendChild(tr);
+    }
+
+    updateCount();
+    selBadge.textContent = `Zeile: ${state.selected+1}/${state.rows.length}`;
+  }
+
+  function renderBits(){
+    bitBox.innerHTML = "";
+    weights.innerHTML = "";
+    const ws = [64,32,16,8,4,2,1];
+
+    for(let idx=0; idx<BIT_WIDTH; idx++){
+      const b = BIT_WIDTH-1-idx; // 6..0
+      const d = document.createElement("div");
+      d.className = "bit";
+      const on = ((state.bitValue >> b) & 1) === 1;
+      d.classList.toggle("on", on);
+      d.textContent = on ? "1" : "0";
+      d.title = `Bit ${b} (Wert ${1<<b})`;
+      d.addEventListener("click", () => {
+        state.bitValue ^= (1 << b);
+        updateBigFromBits();
+        renderBits();
+        if(state.selected >= 0){
+          applyBitsToSelectedRow();
+        }
+      });
+      bitBox.appendChild(d);
+
+      const w = document.createElement("span");
+      w.textContent = String(ws[idx]);
+      weights.appendChild(w);
+    }
+  }
+
+  function updateBigFromBits(){
+    const v = state.bitValue & MAX_VAL;
+    bigChar.textContent = prettyChar(v);
+    pillDec.textContent = `Dec: ${v}`;
+    pillBin.textContent = `Bin: ${toBin7(v)}`;
+  }
+
+  function selectRow(i){
+    state.selected = i;
+    state.bitValue = state.rows[i].code & MAX_VAL;
+    updateBigFromBits();
+    renderBits();
+    renderTable();
+  }
+
+  function applyBitsToSelectedRow(){
+    const v = state.bitValue & MAX_VAL;
+    state.rows[state.selected] = { ch: codeToChar(v), code: v };
+    renderTable();
+
+    if(state.mode === "T2C"){
+      codesBox.value = exportCodesFromRows();
+    } else {
+      textBox.value = state.rows.map(r => r.ch).join("");
+    }
+  }
+
+  function exportCodesFromRows(){
+    if(state.base === "dec"){
+      return state.rows.map(r => String(r.code & MAX_VAL)).join(" ");
+    } else {
+      return state.rows.map(r => (r.code & MAX_VAL).toString(2)).join(" ");
+    }
+  }
+
+  function splitTokens(raw){
+    return (raw || "")
+      .trim()
+      .split(/[\s,;]+/)
+      .filter(Boolean);
+  }
+
+  function parseToken(tok){
+    if(state.base === "dec"){
+      if(!/^[+-]?\d+$/.test(tok)) return null;
+      return Number(tok);
+    } else {
+      tok = tok.replace(/^0b/i, "");
+      if(!/^[01]+$/.test(tok)) return null;
+      return parseInt(tok, 2);
+    }
+  }
+
+  function doTextToCodes(){
+    const txt = textBox.value || "";
+    const rows = [];
+    for(const ch of txt){
+      const code = charToCode(ch);
+      rows.push({ ch: codeToChar(code), code: code & MAX_VAL });
+    }
+    state.rows = rows;
+    state.selected = rows.length ? 0 : -1;
+
+    codesBox.value = exportCodesFromRows();
+    renderTable();
+
+    if(state.selected >= 0) selectRow(0);
+    else {
+      state.bitValue = 0;
+      updateBigFromBits();
+      renderBits();
+    }
+  }
+
+  function doCodesToText(showAlerts=true){
+    const toks = splitTokens(codesBox.value || "");
+    if(toks.length === 0){
+      textBox.value = "";
+      clearRows();
+      return;
+    }
+
+    const codes = [];
+    for(const t of toks){
+      const n = parseToken(t);
+      if(n == null || !Number.isFinite(n)){
+        if(showAlerts) alert(`Ungültiger Wert: "${t}"`);
+        return;
+      }
+      codes.push(clamp(Math.round(n), 0, MAX_VAL));
+    }
+
+    state.rows = codes.map(c => ({ ch: codeToChar(c), code: c }));
+    state.selected = state.rows.length ? 0 : -1;
+
+    textBox.value = state.rows.map(r => r.ch).join("");
+    renderTable();
+
+    if(state.selected >= 0) selectRow(0);
+    else {
+      state.bitValue = 0;
+      updateBigFromBits();
+      renderBits();
+    }
+  }
+
+  // --- ASCII table modal content ---
+  const ASCII_NAMES = (() => {
+    const names = new Array(128).fill("");
+    const base = {
+      0:"NUL",1:"SOH",2:"STX",3:"ETX",4:"EOT",5:"ENQ",6:"ACK",7:"BEL",
+      8:"BS",9:"TAB",10:"LF",11:"VT",12:"FF",13:"CR",14:"SO",15:"SI",
+      16:"DLE",17:"DC1",18:"DC2",19:"DC3",20:"DC4",21:"NAK",22:"SYN",23:"ETB",
+      24:"CAN",25:"EM",26:"SUB",27:"ESC",28:"FS",29:"GS",30:"RS",31:"US",
+      32:"SPACE",127:"DEL"
+    };
+    for(const k in base) names[Number(k)] = base[k];
+    return names;
+  })();
+
+  function asciiRowMatches(i, q){
+    if(!q) return true;
+    q = q.toLowerCase();
+    const dec = String(i);
+    const bin = toBin7(i);
+    const ch = prettyChar(i).toLowerCase();
+    const name = (ASCII_NAMES[i] || "").toLowerCase();
+    return dec.includes(q) || bin.includes(q) || name.includes(q) || ch.includes(q);
+  }
+
+  function appendCodeToCodefolge(code){
+    const token = (state.base === "dec") ? String(code) : code.toString(2);
+    const existing = (codesBox.value || "").trim();
+    codesBox.value = existing ? (existing + " " + token) : token;
+  }
+
+  function renderAsciiTable(){
+    const q = (asciiSearch.value || "").trim();
+    asciiTbody.innerHTML = "";
+
+    for(let i=0;i<=127;i++){
+      if(!asciiRowMatches(i, q)) continue;
+
+      const tr = document.createElement("tr");
+      tr.className = "clickRow";
+      tr.title = "Klick: in Codefolge einfügen";
+
+      const tdDec = document.createElement("td"); tdDec.className = "mono"; tdDec.textContent = String(i);
+      const tdBin = document.createElement("td"); tdBin.className = "mono"; tdBin.textContent = toBin7(i);
+      const tdCh  = document.createElement("td"); tdCh.className = "mono"; tdCh.textContent = prettyChar(i);
+      const tdName= document.createElement("td"); tdName.className = "muted"; tdName.textContent = ASCII_NAMES[i] || "";
+
+      tr.appendChild(tdDec);
+      tr.appendChild(tdBin);
+      tr.appendChild(tdCh);
+      tr.appendChild(tdName);
+
+      tr.addEventListener("click", () => {
+        appendCodeToCodefolge(i);
+        // Optional: Wenn wir im Codes→Text Modus sind, ist die Codefolge Eingabe – daher Fokus dahin.
+        closeAscii();
+        codesBox.focus();
+      });
+
+      asciiTbody.appendChild(tr);
+    }
+  }
+
+  function openAscii(){
+    asciiOverlay.style.display = "flex";
+    asciiOverlay.setAttribute("aria-hidden", "false");
+    asciiSearch.value = "";
+    renderAsciiTable();
+    setTimeout(() => asciiSearch.focus(), 50);
+  }
+  function closeAscii(){
+    asciiOverlay.style.display = "none";
+    asciiOverlay.setAttribute("aria-hidden", "true");
+  }
+
+  // --- Events ---
+  chipT2C.addEventListener("click", () => setMode("T2C"));
+  chipC2T.addEventListener("click", () => setMode("C2T"));
+
+  codeBaseSel.addEventListener("change", () => {
+    state.base = codeBaseSel.value;
+    // Recompute based on active side (keeps fields consistent with the mode)
+    if(state.mode === "T2C"){
+      if((textBox.value || "").length) doTextToCodes(false);
+      else { codesBox.value=""; clearRows(); }
+    } else {
+      if((codesBox.value || "").trim().length) doCodesToText(false);
+      else { textBox.value=""; clearRows(); }
+    }
+    // Also refresh ASCII table view if it's open (tokens appended should match new base)
+    if(asciiOverlay.style.display === "flex") renderAsciiTable();
+  });
+
+  btnConvert.addEventListener("click", () => {
+    if(state.mode === "T2C") doTextToCodes(true);
+    else doCodesToText(true);
+  });
+
+  btnClearAll.addEventListener("click", () => {
+    textBox.value = "";
+    codesBox.value = "";
+    clearRows();
+  });
+
+  prevRowBtn.addEventListener("click", () => {
+    if(state.rows.length === 0) return;
+    const i = (state.selected <= 0) ? state.rows.length-1 : state.selected-1;
+    selectRow(i);
+  });
+
+  nextRowBtn.addEventListener("click", () => {
+    if(state.rows.length === 0) return;
+    const i = (state.selected >= state.rows.length-1) ? 0 : state.selected+1;
+    selectRow(i);
+  });
+
+  zeroBitsBtn.addEventListener("click", () => {
+    state.bitValue = 0;
+    updateBigFromBits();
+    renderBits();
+    if(state.selected >= 0) applyBitsToSelectedRow();
+  });
+
+  // Modal events
+  openAsciiBtn.addEventListener("click", openAscii);
+  closeAsciiBtn.addEventListener("click", closeAscii);
+  asciiOverlay.addEventListener("click", (e) => {
+    if(e.target === asciiOverlay) closeAscii();
+  });
+  asciiSearch.addEventListener("input", renderAsciiTable);
+  window.addEventListener("keydown", (e) => {
+    if(e.key === "Escape" && asciiOverlay.style.display === "flex") closeAscii();
+  });
+
+  // Init
+  state.base = codeBaseSel.value;
+  state.bitValue = 0;
+  updateBigFromBits();
+  renderBits();
+  renderTable();
+  updateCount();
+  setMode("T2C");
+})();
+</script>
+</body>
+</html>
